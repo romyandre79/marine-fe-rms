@@ -8,7 +8,7 @@ const navItems = [
   { label: 'Ships', path: '/ships', icon: 'heroicons:command-line' },
   { label: 'Monitoring', path: '/monitoring', icon: 'heroicons:computer-desktop' },
   { label: 'Devices', path: '/devices', icon: 'heroicons:cpu-chip' },
-  { label: 'Device Types', path: '/device-types', icon: 'heroicons:adjustments-horizontal' },
+  { label: 'Device Types', path: '/device-types', icon: 'heroicons:adjustments-horizontal', roles: ['company_admin', 'super_admin'] },
   { label: 'Alerts', path: '/alerts', icon: 'heroicons:bell' },
   { label: 'Users', path: '/users', icon: 'heroicons:users', roles: ['company_admin', 'super_admin'] }
 ]

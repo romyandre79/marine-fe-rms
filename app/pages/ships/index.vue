@@ -127,7 +127,7 @@ const headers = [
         <p class="text-xs text-slate-500 font-medium">Manage company vessels and monitor their telemetry device mappings.</p>
       </div>
       <UiButton
-        v-if="['company_admin', 'super_admin', 'operator'].includes(auth.userRole)"
+        v-if="['company_admin', 'super_admin'].includes(auth.userRole)"
         variant="primary"
         size="md"
         @click="openAddModal"
@@ -166,7 +166,7 @@ const headers = [
       <template #cell-actions="{ item }">
         <div class="flex items-center gap-2">
           <UiButton
-            v-if="['company_admin', 'super_admin', 'operator'].includes(auth.userRole)"
+            v-if="['company_admin', 'super_admin'].includes(auth.userRole)"
             variant="ghost"
             size="sm"
             @click="openEditModal(item)"
