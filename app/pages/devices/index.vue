@@ -14,6 +14,9 @@ const devices = computed(() => devicesRes.value?.data || [])
 const { data: shipsRes } = await useApi<any>('/api/v1/ships')
 const shipsList = computed(() => shipsRes.value?.data || [])
 
+const { data: typesRes } = await useApi<any>('/api/v1/device-types')
+const deviceTypesList = computed(() => typesRes.value?.data || [])
+
 // Modal state
 const isModalOpen = ref(false)
 const isEditMode = ref(false)
@@ -21,7 +24,7 @@ const activeDeviceId = ref<string | null>(null)
 
 // Form fields
 const name = ref('')
-const deviceTypeId = ref('b1111111-1111-1111-1111-111111111111')
+const deviceTypeId = ref('')
 const shipId = ref('')
 const variablesSchema = ref('[]')
 const status = ref('online')
@@ -32,7 +35,7 @@ const openAddModal = () => {
   isEditMode.value = false
   activeDeviceId.value = null
   name.value = ''
-  deviceTypeId.value = 'b1111111-1111-1111-1111-111111111111'
+  deviceTypeId.value = deviceTypesList.value[0]?.id || ''
   shipId.value = ''
   variablesSchema.value = '[]'
   status.value = 'online'
@@ -44,7 +47,7 @@ const openEditModal = (device: any) => {
   isEditMode.value = true
   activeDeviceId.value = device.id
   name.value = device.name
-  deviceTypeId.value = device.device_type_id || 'b1111111-1111-1111-1111-111111111111'
+  deviceTypeId.value = device.device_type_id || ''
   shipId.value = device.ship_id || ''
   variablesSchema.value = device.variables_schema ? JSON.stringify(JSON.parse(device.variables_schema), null, 2) : '[]'
   status.value = device.status
@@ -215,10 +218,13 @@ const headers = [
           <label class="text-xs font-semibold text-slate-500">Device Type</label>
           <select
             v-model="deviceTypeId"
+            required
             class="w-full px-4 h-11 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-700"
           >
-            <option value="b1111111-1111-1111-1111-111111111111">Main Engine</option>
-            <option value="b2222222-2222-2222-2222-222222222222">Generator</option>
+            <option value="" disabled>-- Select Device Type --</option>
+            <option v-for="t in deviceTypesList" :key="t.id" :value="t.id">
+              {{ t.name }}
+            </option>
           </select>
         </div>
 
