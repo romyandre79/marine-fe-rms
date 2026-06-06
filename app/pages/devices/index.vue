@@ -133,7 +133,7 @@ const headers = [
         <p class="text-xs text-slate-500 font-medium">Configure network node agents and monitor host vitals.</p>
       </div>
       <UiButton
-        v-if="['company_admin', 'super_admin', 'operator'].includes(auth.userRole)"
+        v-if="auth.userRole === 'super_admin'"
         variant="primary"
         size="md"
         @click="openAddModal"
@@ -175,7 +175,7 @@ const headers = [
       <template #cell-actions="{ item }">
         <div class="flex items-center gap-2">
           <UiButton
-            v-if="['company_admin', 'super_admin', 'operator'].includes(auth.userRole)"
+            v-if="auth.userRole === 'super_admin'"
             variant="ghost"
             size="sm"
             @click="openEditModal(item)"
@@ -183,7 +183,7 @@ const headers = [
             <Icon name="heroicons:pencil-square" class="w-4 h-4" />
           </UiButton>
           <UiButton
-            v-if="['company_admin', 'super_admin'].includes(auth.userRole)"
+            v-if="auth.userRole === 'super_admin'"
             variant="ghost"
             size="sm"
             class="text-rose-500 hover:text-rose-700"
