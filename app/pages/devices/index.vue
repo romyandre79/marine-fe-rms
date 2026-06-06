@@ -11,6 +11,9 @@ const auth = useAuth()
 const { data: devicesRes, pending, refresh } = await useApi<any>('/api/v1/devices')
 const devices = computed(() => devicesRes.value?.data || [])
 
+const { data: shipsRes } = await useApi<any>('/api/v1/ships')
+const shipsList = computed(() => shipsRes.value?.data || [])
+
 // Modal state
 const isModalOpen = ref(false)
 const isEditMode = ref(false)
@@ -19,6 +22,7 @@ const activeDeviceId = ref<string | null>(null)
 // Form fields
 const name = ref('')
 const deviceTypeId = ref('b1111111-1111-1111-1111-111111111111')
+const shipId = ref('')
 const variablesSchema = ref('[]')
 const status = ref('online')
 const formError = ref('')
@@ -29,6 +33,7 @@ const openAddModal = () => {
   activeDeviceId.value = null
   name.value = ''
   deviceTypeId.value = 'b1111111-1111-1111-1111-111111111111'
+  shipId.value = ''
   variablesSchema.value = '[]'
   status.value = 'online'
   formError.value = ''
@@ -40,6 +45,7 @@ const openEditModal = (device: any) => {
   activeDeviceId.value = device.id
   name.value = device.name
   deviceTypeId.value = device.device_type_id || 'b1111111-1111-1111-1111-111111111111'
+  shipId.value = device.ship_id || ''
   variablesSchema.value = device.variables_schema ? JSON.stringify(JSON.parse(device.variables_schema), null, 2) : '[]'
   status.value = device.status
   formError.value = ''
@@ -61,6 +67,7 @@ const handleSubmit = async () => {
   const body = {
     name: name.value,
     device_type_id: deviceTypeId.value,
+    ship_id: shipId.value || null,
     variables_schema: variablesSchema.value,
     status: status.value
   }
@@ -109,6 +116,7 @@ const handleDelete = async (id: string) => {
 const headers = [
   { key: 'name', label: 'Device Name' },
   { key: 'device_type', label: 'Device Type' },
+  { key: 'ship', label: 'Ship Vessel' },
   { key: 'status', label: 'Status' },
   { key: 'actions', label: 'Actions' }
 ]
@@ -143,6 +151,11 @@ const headers = [
       <template #cell-device_type="{ item }">
         <span class="text-xs font-semibold text-slate-600 dark:text-slate-400">
           {{ item.device_type?.name || '-' }}
+        </span>
+      </template>
+      <template #cell-ship="{ item }">
+        <span class="text-xs font-semibold text-slate-600 dark:text-slate-400">
+          {{ item.ship?.name || '-' }}
         </span>
       </template>
       <template #cell-status="{ item }">
@@ -206,6 +219,19 @@ const headers = [
           >
             <option value="b1111111-1111-1111-1111-111111111111">Main Engine</option>
             <option value="b2222222-2222-2222-2222-222222222222">Generator</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold text-slate-500">Assigned Ship</label>
+          <select
+            v-model="shipId"
+            class="w-full px-4 h-11 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-700"
+          >
+            <option value="">-- Unassigned --</option>
+            <option v-for="ship in shipsList" :key="ship.id" :value="ship.id">
+              {{ ship.name }}
+            </option>
           </select>
         </div>
 

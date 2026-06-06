@@ -5,6 +5,7 @@ const auth = useAuth()
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: 'heroicons:squares-2x2' },
   { label: 'Companies', path: '/companies', icon: 'heroicons:building-office', roles: ['super_admin'] },
+  { label: 'Ships', path: '/ships', icon: 'heroicons:command-line' },
   { label: 'Monitoring', path: '/monitoring', icon: 'heroicons:computer-desktop' },
   { label: 'Devices', path: '/devices', icon: 'heroicons:cpu-chip' },
   { label: 'Alerts', path: '/alerts', icon: 'heroicons:bell' },
