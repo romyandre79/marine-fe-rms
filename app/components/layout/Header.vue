@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const tenant = useTenant()
 const auth = useAuth()
+const { toggleMobile, mobileOpen } = useSidebar()
 
 onMounted(async () => {
   // Load companies if user is logged in
@@ -23,6 +24,15 @@ const toggleDarkMode = () => {
 
 <template>
   <header class="h-[72px] bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/80 px-8 flex items-center justify-between shrink-0">
+    <!-- Mobile hamburger -->
+    <button
+      class="md:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors mr-2"
+      @click="toggleMobile"
+      :aria-label="mobileOpen ? 'Close menu' : 'Open menu'"
+    >
+      <Icon :name="mobileOpen ? 'heroicons:x-mark' : 'heroicons:bars-3'" class="w-5 h-5" />
+    </button>
+
     <!-- Breadcrumbs / Page Title -->
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2">
