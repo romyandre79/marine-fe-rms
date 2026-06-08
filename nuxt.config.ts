@@ -19,7 +19,7 @@ export default defineNuxtConfig({
       ]
     }
   },
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', 'leaflet/dist/leaflet.css'],
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
@@ -40,7 +40,8 @@ export default defineNuxtConfig({
     headers: {
       contentSecurityPolicy: {
         'img-src': ["'self'", "data:", "https:"],
-        'connect-src': ["'self'", "ws:", "wss:", "http:", "https:"]
+        'connect-src': ["'self'", "ws:", "wss:", "http:", "https:"],
+        'style-src': ["'self'", "'unsafe-inline'"]
       },
       crossOriginEmbedderPolicy: 'unsafe-none'
     },

@@ -127,9 +127,16 @@ const headers = [
     <!-- Table list -->
     <UiTable :headers="headers" :items="deviceTypes" :loading="pending" empty-text="No device types found.">
       <template #cell-name="{ item }">
-        <div>
-          <div class="font-semibold text-slate-800 dark:text-slate-200">{{ item.name }}</div>
-          <div class="text-[10px] text-slate-400 font-mono tracking-wider mt-0.5 select-all">{{ item.id }}</div>
+        <div class="flex items-center gap-2">
+          <Icon
+            :name="item.name?.toLowerCase() === 'gps' ? 'heroicons:map-pin' : 'heroicons:cpu-chip'"
+            :class="item.name?.toLowerCase() === 'gps' ? 'text-blue-500' : 'text-slate-400'"
+            class="w-4 h-4 shrink-0"
+          />
+          <div>
+            <div class="font-semibold text-slate-800 dark:text-slate-200">{{ item.name }}</div>
+            <div class="text-[10px] text-slate-400 font-mono tracking-wider mt-0.5 select-all">{{ item.id }}</div>
+          </div>
         </div>
       </template>
       <template #cell-description="{ item }">
@@ -148,7 +155,7 @@ const headers = [
             <Icon name="heroicons:pencil-square" class="w-4 h-4" />
           </UiButton>
           <UiButton
-            v-if="['company_admin', 'super_admin'].includes(auth.userRole) && !['b1111111-1111-1111-1111-111111111111', 'b2222222-2222-2222-2222-222222222222'].includes(item.id)"
+            v-if="['company_admin', 'super_admin'].includes(auth.userRole) && !['b1111111-1111-1111-1111-111111111111', 'b2222222-2222-2222-2222-222222222222', 'b3333333-3333-3333-3333-333333333333'].includes(item.id)"
             variant="ghost"
             size="sm"
             class="text-rose-500 hover:text-rose-700"

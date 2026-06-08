@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { VesselPosition } from '~/components/map/VesselMap.vue'
+
 definePageMeta({
   middleware: ['auth', 'tenant']
 })
@@ -21,23 +23,41 @@ const { data: dashboardRes, pending, refresh } = await useApi<any>(() => {
   return url
 })
 
+// server: false → skip SSR, always fetch fresh on client to avoid stale cache
+const {
+  data: vesselRes,
+  error: vesselError,
+  pending: vesselPending,
+  refresh: refreshPositions
+} = useApi<VesselPosition[]>('/api/v1/dashboard/vessel-positions', { server: false })
+
 const stats = computed(() => dashboardRes.value?.data || {
   devices: { total: 0, online: 0, offline: 0, warning: 0, error: 0 },
   alerts: { total: 0, critical: 0, warning: 0, info: 0 },
   metrics: { avg_rpm: 0, avg_flow_rate: 0, avg_power: 0 }
 })
 
+const vesselPositions = computed<VesselPosition[]>(() => vesselRes.value?.data ?? [])
+
+const selectedVesselId = ref<string | null>(null)
+
+// Reset selection if the selected vessel is no longer in the list
+watch(vesselPositions, (list) => {
+  if (selectedVesselId.value && !list.find(p => p.ship_id === selectedVesselId.value)) {
+    selectedVesselId.value = null
+  }
+})
+
 // WebSocket real-time updates integration
 const ws = useWebSocket()
 
 onMounted(() => {
-  // Listen for real-time monitoring events
-  const unsubMonitoring = ws.on('monitoring', (payload: any) => {
+  const unsubMonitoring = ws.on('monitoring', (_payload: any) => {
     refresh()
+    refreshPositions()
   })
 
-  // Listen for real-time alerts
-  const unsubAlerts = ws.on('alert', (payload: any) => {
+  const unsubAlerts = ws.on('alert', (_payload: any) => {
     refresh()
   })
 
@@ -56,34 +76,34 @@ onMounted(() => {
         <h2 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Dashboard Overview</h2>
         <p class="text-xs text-slate-500 font-medium">Real-time marine telemetries, vessel performance and active incidents.</p>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-2">
         <!-- Timeframe Select -->
         <select
           v-model="timeframe"
           @change="refresh"
-          class="h-10 pl-3 pr-8 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer text-slate-700 dark:text-slate-300"
+          class="h-9 pl-3 pr-8 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer text-slate-700 dark:text-slate-300"
         >
           <option value="1h">Last 1 Hour</option>
           <option value="1d">Last 24 Hours</option>
           <option value="7d">Last 7 Days</option>
           <option value="30d">Last 30 Days</option>
-          <option value="custom">Custom Date Range</option>
+          <option value="custom">Custom Range</option>
         </select>
 
         <!-- Custom Range Date Pickers -->
-        <div v-if="timeframe === 'custom'" class="flex items-center gap-2">
+        <div v-if="timeframe === 'custom'" class="flex items-center gap-1.5">
           <input
             v-model="startTime"
             type="datetime-local"
             @change="refresh"
-            class="h-10 px-3 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 outline-none"
+            class="h-9 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 outline-none"
           />
-          <span class="text-xs text-slate-400">to</span>
+          <span class="text-xs text-slate-400">–</span>
           <input
             v-model="endTime"
             type="datetime-local"
             @change="refresh"
-            class="h-10 px-3 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 outline-none"
+            class="h-9 px-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 outline-none"
           />
         </div>
 
@@ -92,11 +112,11 @@ onMounted(() => {
           Refresh
         </UiButton>
         <span
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wide uppercase"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wide uppercase whitespace-nowrap"
           :class="ws.isConnected.value ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'"
         >
           <span class="w-1.5 h-1.5 rounded-full animate-ping" :class="ws.isConnected.value ? 'bg-emerald-500' : 'bg-rose-500'" />
-          {{ ws.isConnected.value ? 'Live Connected' : 'Disconnected' }}
+          {{ ws.isConnected.value ? 'Live' : 'Offline' }}
         </span>
       </div>
     </div>
@@ -155,6 +175,77 @@ onMounted(() => {
         <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
       </UiCard>
     </div>
+
+    <!-- Vessel Position Map -->
+    <UiCard class="overflow-hidden">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <Icon name="heroicons:map" class="w-5 h-5 text-blue-500" />
+            <h3 class="font-bold text-sm text-slate-800 dark:text-white">Vessel Positions</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Vessel selector -->
+            <select
+              v-if="vesselPositions.length > 0"
+              v-model="selectedVesselId"
+              class="h-7 pl-2 pr-6 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer text-slate-700 dark:text-slate-300"
+            >
+              <option :value="null">All Vessels</option>
+              <option
+                v-for="pos in vesselPositions"
+                :key="pos.ship_id"
+                :value="pos.ship_id"
+              >{{ pos.ship_name }}</option>
+            </select>
+
+            <span v-if="vesselPending" class="text-xs text-slate-400 flex items-center gap-1 whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+              Loading...
+            </span>
+            <span v-else-if="vesselError" class="text-xs text-rose-500 flex items-center gap-1 whitespace-nowrap">
+              <Icon name="heroicons:exclamation-circle" class="w-3.5 h-3.5" />
+              Error
+            </span>
+            <span v-else class="text-xs text-slate-400 whitespace-nowrap">
+              {{ vesselPositions.filter(p => p.latitude != null).length }} of {{ vesselPositions.length }} tracked
+            </span>
+            <UiButton variant="ghost" size="sm" @click="refreshPositions" :loading="vesselPending">
+              <Icon name="heroicons:arrow-path" class="w-3.5 h-3.5" />
+            </UiButton>
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">OSM</span>
+          </div>
+        </div>
+      </template>
+
+      <!-- API error state -->
+      <div v-if="vesselError" class="mx-4 my-3 p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800 rounded-lg">
+        <p class="text-xs font-semibold text-rose-600 dark:text-rose-400 mb-1">Vessel positions endpoint error</p>
+        <p class="text-[11px] text-rose-500 font-mono">{{ (vesselError as any)?.data?.message || (vesselError as any)?.message || String(vesselError) }}</p>
+        <p class="text-[10px] text-rose-400 mt-1">Pastikan backend sudah di-restart dan migration 000006 sudah dijalankan.</p>
+      </div>
+
+      <ClientOnly>
+        <MapVesselMap :positions="vesselPositions" :focus-id="selectedVesselId" />
+        <template #fallback>
+          <div class="flex items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-b-xl" style="height:440px;">
+            <div class="flex flex-col items-center gap-2 text-slate-400">
+              <Icon name="heroicons:map" class="w-8 h-8 animate-pulse" />
+              <span class="text-sm">Loading map...</span>
+            </div>
+          </div>
+        </template>
+      </ClientOnly>
+
+      <div v-if="!vesselError && !vesselPending && vesselPositions.length === 0" class="mt-3 px-1">
+        <p class="text-xs text-slate-400 text-center">
+          Belum ada data GPS. Jalankan seed atau kirim data
+          <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">latitude</code>
+          &amp; <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">longitude</code>
+          dari perangkat GPS kapal.
+        </p>
+      </div>
+    </UiCard>
 
     <!-- Marine Metrics Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
