@@ -34,9 +34,7 @@ const filteredNavItems = computed(() => {
     <div class="h-[72px] flex items-center border-b border-slate-800 shrink-0 relative"
       :class="isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'"
     >
-      <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-bold text-white shadow-md shadow-primary/30 shrink-0">
-        M
-      </div>
+      <img src="/icon-rms.png" alt="RMS" class="w-8 h-8 rounded-lg object-contain shrink-0" />
       <div v-if="!isCollapsed" class="flex-1 min-w-0 overflow-hidden">
         <h1 class="text-sm font-bold tracking-wide text-white uppercase whitespace-nowrap">RMS Portal</h1>
         <span class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase">Enterprise Monitor</span>

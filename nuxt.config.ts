@@ -15,7 +15,8 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Vessel Remote Monitoring System' }
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+        { rel: 'icon', type: 'image/png', href: '/icon-rms.png' },
+        { rel: 'apple-touch-icon', href: '/icon-rms.png' }
       ]
     }
   },
