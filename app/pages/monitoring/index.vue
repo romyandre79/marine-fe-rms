@@ -120,7 +120,7 @@ onMounted(() => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 const headers = [
-  { key: 'device_name', label: 'Device Name'     },
+  { key: 'device_name', label: 'Sensor Name'     },
   { key: 'metric_type', label: 'Metric Category' },
   { key: 'metric_name', label: 'Parameter'       },
   { key: 'value',       label: 'Reading Value'   },
@@ -171,13 +171,13 @@ const getMetricColor = (type: string) => {
           <option v-for="s in ships" :key="s.id" :value="s.id">{{ s.name }}</option>
         </select>
 
-        <!-- Device Filter -->
+        <!-- Sensor Filter -->
         <select
           v-model="selectedDevice"
           @change="refresh"
           class="h-10 pl-3 pr-8 text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer text-slate-700 dark:text-slate-300"
         >
-          <option value="">All Devices</option>
+          <option value="">All Sensors</option>
           <option v-for="d in devices" :key="d.id" :value="d.id">{{ d.name }}</option>
         </select>
 
@@ -200,12 +200,12 @@ const getMetricColor = (type: string) => {
 
     <!-- Telemetry stream -->
     <div class="flex flex-col gap-6">
-      <!-- Live Feed grouped by device -->
+      <!-- Live Feed grouped by sensor -->
       <UiCard class="w-full">
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Device Status Feed</h4>
+              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Sensor Status Feed</h4>
               <span v-if="selectedShip" class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
                 <Icon name="heroicons:map-pin" class="w-3 h-3" />
                 {{ ships.find((s: any) => s.id === selectedShip)?.name }}
@@ -229,7 +229,7 @@ const getMetricColor = (type: string) => {
             <div class="flex items-center gap-2 px-1">
               <Icon name="heroicons:building-storefront" class="w-4 h-4 text-primary shrink-0" />
               <span class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ shipGroup.shipName }}</span>
-              <span class="text-[10px] text-slate-400 font-medium">({{ shipGroup.devices.length }} device{{ shipGroup.devices.length !== 1 ? 's' : '' }})</span>
+              <span class="text-[10px] text-slate-400 font-medium">({{ shipGroup.devices.length }} sensor{{ shipGroup.devices.length !== 1 ? 's' : '' }})</span>
               <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700 ml-1" />
             </div>
 
