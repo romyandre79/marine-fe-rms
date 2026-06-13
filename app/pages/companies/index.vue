@@ -16,8 +16,24 @@ onMounted(() => {
   }
 })
 
-const { data: companiesRes, pending, refresh } = await useApi<any>('/api/v1/companies')
-const companies = computed(() => companiesRes.value?.data || [])
+const { data: companiesRes, pending, refresh } = await useFetch<any>('http://localhost:3004/api/v1/companies', {
+  headers: {
+    Authorization: `Bearer ${useCookie('mms_token').value}`
+  }
+})
+
+const companies = computed(() => {
+  const data = companiesRes.value?.data || []
+  return data.map((c: any) => ({
+    id: c.ID !== undefined ? c.ID : c.id,
+    name: c.Name !== undefined ? c.Name : c.name,
+    slug: c.Slug !== undefined ? c.Slug : c.slug,
+    email: c.Email !== undefined ? c.Email : c.email,
+    phone: c.Phone !== undefined ? c.Phone : c.phone,
+    address: c.Address !== undefined ? c.Address : c.address,
+    website: c.Website !== undefined ? c.Website : c.website
+  }))
+})
 
 // Modal state
 const isModalOpen = ref(false)
@@ -86,15 +102,49 @@ const handleSubmit = async () => {
   try {
     let res
     if (isEditMode.value && activeCompanyId.value) {
-      res = await useApiFetch(`/api/v1/companies/${activeCompanyId.value}`, {
+      // 1. Update in MMS
+      res = await $fetch<any>(`http://localhost:3004/api/v1/companies/${activeCompanyId.value}`, {
         method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${useCookie('mms_token').value}`,
+          'Content-Type': 'application/json'
+        },
         body
       })
+      
+      if (res.success) {
+        // 2. Sync to RMS
+        await useApiFetch(`/api/v1/companies/${activeCompanyId.value}`, {
+          method: 'PUT',
+          body: {
+            id: activeCompanyId.value,
+            ...body
+          }
+        })
+      }
     } else {
-      res = await useApiFetch('/api/v1/companies', {
+      // 1. Create in MMS
+      res = await $fetch<any>('http://localhost:3004/api/v1/companies', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${useCookie('mms_token').value}`,
+          'Content-Type': 'application/json'
+        },
         body
       })
+      
+      if (res.success && res.data) {
+        const createdCompany = res.data
+        const newId = createdCompany.ID || createdCompany.id
+        // 2. Sync to RMS
+        await useApiFetch('/api/v1/companies', {
+          method: 'POST',
+          body: {
+            id: newId,
+            ...body
+          }
+        })
+      }
     }
 
     if (res.success) {
@@ -104,7 +154,7 @@ const handleSubmit = async () => {
       formError.value = res.message || 'Operation failed'
     }
   } catch (err: any) {
-    formError.value = err.response?._data?.message || 'Failed to submit form'
+    formError.value = err.response?._data?.message || err.message || 'Failed to submit form'
   } finally {
     submitting.value = false
   }

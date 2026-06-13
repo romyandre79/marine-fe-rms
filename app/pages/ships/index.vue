@@ -8,17 +8,45 @@ useHead({
 })
 
 const auth = useAuth()
-const { data: shipsRes, pending, refresh } = await useApi<any>('/api/v1/ships')
-const ships = computed(() => shipsRes.value?.data || [])
+const { data: shipsRes, pending, refresh } = await useFetch<any>('http://localhost:3006/api/v1/vessels', {
+  headers: {
+    Authorization: `Bearer ${useCookie('mms_token').value}`
+  }
+})
+
+// Load companies list from MMS (needed for owner company selection)
+const { data: companiesRes } = await useFetch<any>('http://localhost:3004/api/v1/companies', {
+  headers: {
+    Authorization: `Bearer ${useCookie('mms_token').value}`
+  }
+})
+const companiesList = computed(() => {
+  const data = companiesRes.value?.data || []
+  return data.map((c: any) => ({
+    id: c.ID !== undefined ? c.ID : c.id,
+    name: c.Name !== undefined ? c.Name : c.name
+  }))
+})
+
+const ships = computed(() => {
+  const data = shipsRes.value?.data || []
+  return data.map((s: any) => {
+    const company = companiesList.value.find((c: any) => c.id === s.company_id)
+    return {
+      id: s.id,
+      name: s.name,
+      company_id: s.company_id,
+      company: company,
+      description: s.description || s.type || '',
+      status: s.status ? s.status.toLowerCase() : 'active'
+    }
+  })
+})
 
 // Modal state
 const isModalOpen = ref(false)
 const isEditMode = ref(false)
 const activeShipId = ref<string | null>(null)
-
-// Load companies list (only needed for super_admin scope or when registering ships)
-const { data: companiesRes } = await useApi<any>('/api/v1/companies')
-const companiesList = computed(() => companiesRes.value?.data || [])
 
 // Form fields
 const name = ref('')
@@ -59,28 +87,66 @@ const handleSubmit = async () => {
   submitting.value = true
   formError.value = ''
 
-  const body: any = {
+  // FMS vessel body
+  const fmsBody: any = {
     name: name.value,
-    description: description.value,
-    status: status.value
-  }
-
-  if (auth.userRole === 'super_admin' && companyId.value) {
-    body.company_id = companyId.value
+    type: 'Cargo', // Default type for RMS registered vessels
+    status: status.value === 'active' ? 'Active' : 'Inactive',
+    company_id: companyId.value || auth.user?.company_id
   }
 
   try {
     let res
     if (isEditMode.value && activeShipId.value) {
-      res = await useApiFetch(`/api/v1/ships/${activeShipId.value}`, {
+      // 1. Update in FMS
+      res = await $fetch<any>(`http://localhost:3006/api/v1/vessels/${activeShipId.value}`, {
         method: 'PUT',
-        body
+        headers: {
+          Authorization: `Bearer ${useCookie('mms_token').value}`,
+          'Content-Type': 'application/json'
+        },
+        body: fmsBody
       })
+
+      if (res.success) {
+        // 2. Sync to RMS
+        await useApiFetch(`/api/v1/ships/${activeShipId.value}`, {
+          method: 'PUT',
+          body: {
+            id: activeShipId.value,
+            company_id: fmsBody.company_id,
+            name: fmsBody.name,
+            description: description.value,
+            status: status.value
+          }
+        })
+      }
     } else {
-      res = await useApiFetch('/api/v1/ships', {
+      // 1. Create in FMS
+      res = await $fetch<any>('http://localhost:3006/api/v1/vessels', {
         method: 'POST',
-        body
+        headers: {
+          Authorization: `Bearer ${useCookie('mms_token').value}`,
+          'Content-Type': 'application/json'
+        },
+        body: fmsBody
       })
+
+      if (res.success && res.data) {
+        const createdVessel = res.data
+        const newId = createdVessel.id
+        // 2. Sync to RMS
+        await useApiFetch('/api/v1/ships', {
+          method: 'POST',
+          body: {
+            id: newId,
+            company_id: fmsBody.company_id,
+            name: fmsBody.name,
+            description: description.value,
+            status: status.value
+          }
+        })
+      }
     }
 
     if (res.success) {
@@ -90,7 +156,7 @@ const handleSubmit = async () => {
       formError.value = res.message || 'Operation failed'
     }
   } catch (err: any) {
-    formError.value = err.response?._data?.message || 'Failed to submit form'
+    formError.value = err.response?._data?.message || err.message || 'Failed to submit form'
   } finally {
     submitting.value = false
   }
@@ -99,14 +165,23 @@ const handleSubmit = async () => {
 const handleDelete = async (id: string) => {
   if (!confirm('Are you sure you want to delete this ship? All mapped devices will be unassigned.')) return
   try {
-    const res = await useApiFetch(`/api/v1/ships/${id}`, {
-      method: 'DELETE'
+    // 1. Delete in FMS
+    const res = await $fetch<any>(`http://localhost:3006/api/v1/vessels/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${useCookie('mms_token').value}`
+      }
     })
+
     if (res.success) {
+      // 2. Sync deletion to RMS
+      await useApiFetch(`/api/v1/ships/${id}`, {
+        method: 'DELETE'
+      })
       refresh()
     }
   } catch (err: any) {
-    alert(err.response?._data?.message || 'Failed to delete ship')
+    alert(err.response?._data?.message || err.message || 'Failed to delete ship')
   }
 }
 

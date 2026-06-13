@@ -1,6 +1,14 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'auth'
+  layout: 'auth',
+  middleware: [
+    function (to, from) {
+      if (import.meta.client) {
+        const currentUrl = window.location.origin + '/dashboard'
+        window.location.href = `http://localhost:3003/login?redirect_back=${encodeURIComponent(currentUrl)}`
+      }
+    }
+  ]
 })
 
 useHead({

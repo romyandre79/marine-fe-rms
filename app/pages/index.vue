@@ -7,7 +7,10 @@ definePageMeta({
       if (auth.isAuthenticated) {
         return navigateTo('/dashboard')
       } else {
-        return navigateTo('/login')
+        if (import.meta.client) {
+          const currentUrl = window.location.href
+          window.location.href = `http://localhost:3003/login?redirect_back=${encodeURIComponent(currentUrl)}`
+        }
       }
     }
   ]

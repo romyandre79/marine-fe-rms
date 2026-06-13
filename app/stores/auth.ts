@@ -16,15 +16,50 @@ export const useAuthStore = defineStore('auth', () => {
   const accessToken = useCookie<string | null>('access_token')
   const refreshToken = useCookie<string | null>('refresh_token')
   const tenantId = useCookie<string | null>('tenant_id')
+  
+  // Shared MMS SSO Cookies
+  const tokenCookie = useCookie<string | null>('mms_token', { path: '/' })
+  const userCookie = useCookie<any>('mms_user', { path: '/' })
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const userRole = computed(() => user.value?.role || 'viewer')
 
   // Load user from cookie/state on initialization
   const loadUser = () => {
-    const userCookie = useCookie<User | null>('user_data')
-    if (userCookie.value) {
-      user.value = userCookie.value
+    if (tokenCookie.value) {
+      accessToken.value = tokenCookie.value
+      if (userCookie.value) {
+        try {
+          const userData = typeof userCookie.value === 'string' ? JSON.parse(userCookie.value) : userCookie.value
+          
+          // Find default company and role from user companies
+          const defaultCompany = userData.companies && userData.companies.length > 0 ? userData.companies[0] : null
+          const defaultCompanyId = defaultCompany ? (defaultCompany.company_id || defaultCompany.CompanyID) : ''
+          const defaultRole = defaultCompany ? (defaultCompany.role || defaultCompany.Role) : userData.role || 'viewer'
+
+          tenantId.value = defaultCompanyId
+          user.value = {
+            id: userData.id || userData.ID,
+            name: userData.name || userData.Name,
+            email: userData.email || userData.Email,
+            role: defaultRole,
+            company_id: defaultCompanyId,
+            avatar: userData.avatar || userData.Avatar,
+            is_active: userData.is_active !== undefined ? userData.is_active : true,
+            email_verified: userData.email_verified !== undefined ? userData.email_verified : true
+          }
+          
+          const rmsUserCookie = useCookie('user_data')
+          rmsUserCookie.value = user.value as any
+        } catch (e) {
+          console.error('Failed to map shared SSO mms_user:', e)
+        }
+      }
+    } else {
+      const rmsUserCookie = useCookie<User | null>('user_data')
+      if (rmsUserCookie.value) {
+        user.value = rmsUserCookie.value
+      }
     }
   }
 
@@ -107,11 +142,17 @@ export const useAuthStore = defineStore('auth', () => {
     tenantId.value = null
     user.value = null
     
-    const userCookie = useCookie('user_data')
+    const rmsUserCookie = useCookie('user_data')
+    rmsUserCookie.value = null
+    
+    tokenCookie.value = null
     userCookie.value = null
 
-    // Redirect to login page
-    navigateTo('/login')
+    // Redirect to MMS Portal login with redirect_back
+    if (import.meta.client) {
+      const currentUrl = window.location.href
+      window.location.href = `http://localhost:3003/login?redirect_back=${encodeURIComponent(currentUrl)}`
+    }
   }
 
   return {
